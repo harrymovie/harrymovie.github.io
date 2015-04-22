@@ -1,0 +1,182 @@
+<html>
+
+<head>
+    <link rel="stylesheet" href="http://netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assignment 4: Visualization</title>
+</head>
+
+<style type="text/css">
+        .header {
+            background-color: #555;
+            color: #ddd;
+        }
+        .header .lead {
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+    </style>
+
+<style>
+
+text.mono {
+        font-size: 9pt;
+        font-family: Consolas, courier;
+}
+
+.counties {
+  fill: none;
+}
+
+.states {
+  fill: none;
+  stroke: #fff;
+  stroke-linejoin: round;
+}
+
+.q0-9 { fill:rgb(220,220,220); }
+.q1-9 { fill:rgb(247,251,255); }
+.q2-9 { fill:rgb(222,235,247); }
+.q3-9 { fill:rgb(198,219,239); }
+.q4-9 { fill:rgb(158,202,225); }
+.q5-9 { fill:rgb(107,174,214); }
+.q6-9 { fill:rgb(66,146,198); }
+.q7-9 { fill:rgb(33,113,181); }
+.q8-9 { fill:rgb(8,81,156); }
+.q9-9 { fill:rgb(8,48,107); }
+
+</style>
+
+<body>
+  <div class="header row">
+        <div class="col-md-2"></div>
+        <div class="col-md-10 lead">
+            Shaochen Wu (sw66)
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-2"></div>
+        <div class="col-md-9">
+            <div class="page-header center">
+                <h1>Part 2: <small>Geomapping Tweet Sentiment</small></h1>
+            </div>
+
+      <h2>Code Part</h2>
+      <p>For this part, I want to create a geographical mapping of tweet sentiments in the United States. In the file <code>county_sents.py</code>, I use the function <code>county_sentiment</code> to take in the data file and return a list of (county, sentiment) tuples and a dictionary mapping from fips code (int) to county name (string). Then I use the <code>compute_avg_sents</code> function to take a list of (county, sentiment) tuples and returns a dictionary with key as county code and value as average sentiment in that county. Below is the visualization of my final output.      
+      </p>
+      <h2>Visualization</h2>
+      <div id="gMap"> </div>
+      <p></p>
+      <h2>Happiest and Non-happiest County</h2>
+      <p>From the visualization map, we can see that the most positive county is <strong>Dickinson</strong> with a score of <strong>0.82</strong>; the most negative county is <strong>Lincoln</strong> with a score of <strong>0.25</strong>. Lincoln is located in Kentucky, which is probably a rich county where people tend to live a relaxed and peaceful life. So the tweet scores are more positive. Lincoln is located in Kentucky, where the weather is not good as the west coast and the crime rate is also quite high, so the tweet scores are more negative. </p>
+
+<h2>Factors Related To Sentiment</h2>
+<p>
+For the factors affecting sentiment, I would say that <strong>house hold income</strong>, <strong>poverty rates</strong>, <strong>crime rate</strong>, <strong>weather</strong>, <strong>unemployment rate</strong> might be quite important.
+            </p>
+    </div>
+    <script src="http://d3js.org/d3.v3.min.js"></script>
+    <script src="http://d3js.org/queue.v1.min.js"></script>
+    <script src="http://d3js.org/topojson.v1.min.js"></script>
+    <script>
+
+    var width = 960,
+        height = 750;
+
+    var rateById = d3.map();
+
+    var rateByName=d3.map(); //keeps track of the names
+
+    var quantize = d3.scale.quantize()
+        .domain([0.4, 0.6])
+        .range(d3.range(10).map(function(i) { return "q" + i + "-9"; }));
+
+    var projection = d3.geo.albersUsa() //gets the map
+        .scale(1280)
+        .translate([width / 2, height / 2]);
+
+    var path = d3.geo.path()
+        .projection(projection);
+
+    var svg = d3.select("#gMap").append("svg")
+        .attr("width", width)
+        .attr("height", height);
+
+    queue()
+        .defer(d3.json, "us.json")
+        .defer(d3.tsv, "county_sentiments.tsv", function(d) { rateById.set(d.id, +d.sent); rateByName.set(d.id, d.name);})
+        .await(ready);
+
+    function ready(error, us) {
+      svg.append("g")
+          .attr("class", "counties")
+        .selectAll("path")
+          .data(topojson.feature(us, us.objects.counties).features)
+        .enter().append("path")
+            .attr("class", function(d) { return quantize(rateById.get(d.id)); })
+            .attr("d", path)
+          //adds the hovering effect
+          .append("title")
+            .text(function(d){if (rateById.get(d.id)!=0) {return rateByName.get(d.id);} });
+        
+      svg.append("path")
+          .datum(topojson.mesh(us, us.objects.states, function(a, b) { return a !== b; }))
+          .attr("class", "states")
+          .attr("d", path);
+     
+    }
+
+
+    list=[0,1,2,3,4,5,6,7,8,9]
+
+    gridSize = Math.floor(width / 24);
+    legendElementWidth = gridSize*2;
+    var legend = svg.selectAll(".legend")
+        .data([0,1,2,3,4,5,6,7,8,9])
+              .enter().append("g")
+              .attr("class", "legend");
+
+          legend.append("rect")
+            .attr("x", function(d, i) { return legendElementWidth * i+50; })
+            .attr("y", height-50)
+            .attr("width", legendElementWidth)
+            .attr("height", gridSize / 2)
+            .style("fill", function(d, i) {  //set fill according to which bucket
+              switch(i){
+                case 0:
+                 return "rgb(220,220,220)";
+                case 1:
+                 return "rgb(247,251,255)"; 
+                case 2:
+                 return "rgb(222,235,247)"; 
+                case 3: 
+                 return "rgb(198,219,239)"; 
+                case 4:
+                 return 'rgb(158,202,225)'; 
+                case 5:
+                 return 'rgb(107,174,214)'; 
+                case 6:
+                 return 'rgb(66,146,198)'; 
+                case 7:
+                 return 'rgb(33,113,181)'; 
+                case 8:
+                 return 'rgb(8,81,156)'; 
+                case 9:
+                 return 'rgb(8,48,107)'; 
+              }
+             });
+          legend.append("text")
+            .attr("class", "mono")
+            .text(function(d,i) {  
+              if (i==0){ return "no data";} //set labels for certain elements
+              if (i==1) { return "negative";}
+              if (i==9) {return "positive";}
+             })
+            .attr("x", function(d, i) { return legendElementWidth * i+50; })
+            .attr("y", height-10);
+    d3.select(self.frameElement).style("height", height + "px");
+  
+</script>
+</body>
+</html>
